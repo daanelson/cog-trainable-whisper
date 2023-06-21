@@ -6,9 +6,6 @@ from typing import Optional
 
 import torch
 from cog import BasePredictor, Input, Path, ConcatenateIterator
-from peft import PeftModel
-from tensorizer import TensorDeserializer
-from tensorizer.utils import no_init_or_tensor
 from transformers import (
     AutoConfig,
     StoppingCriteria,
