@@ -15,10 +15,11 @@ from typing import Any, Dict, List, Union, Optional
 @dataclass
 class WhisperTrainingArguments():
     model_name: str
-    whisper_language: Optional[str]
-    train_data: str
-    eval_data: Optional[str]
     local_output_dir: str
+    train_data: str
+    whisper_language: Optional[str] = field(default=None)
+    eval_data: Optional[str] = field(default=None)
+
 
 
 def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingArguments):
@@ -92,7 +93,7 @@ def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingA
         return {"wer": wer}
 
     # Loading model 
-    model = WhisperForConditionalGeneration.from_pretrained(f"openai/whisper-{model_name}")
+    model = WhisperForConditionalGeneration.from_pretrained(model_name)
     model.config.forced_decoder_ids = None
     model.config.suppress_tokens = []
 

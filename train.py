@@ -22,6 +22,11 @@ def extract_dataset(zip_file_path, extract_directory):
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
         zip_ref.extractall(extract_directory)
 
+    if len(os.listdir(extract_directory)) == 1:
+        # zip likes to nest subdirectories
+        return os.path.join(extract_directory, os.listdir(extract_directory)[0])
+    return extract_directory
+
 def train(
     train_data: Path = Input(
         description="path to data file to use for fine-tuning your model"
@@ -83,11 +88,11 @@ def train(
     # lets us define defaults once, here. So we're doing it. 
     args = locals()
 
-    extract_dataset(train_data, TRAIN_PATH)
-    args['train_data'] = TRAIN_PATH
+    train_path = extract_dataset(train_data, TRAIN_PATH)
+    args['train_data'] = train_path
     if eval_data is not None:
-        extract_dataset(eval_data, EVAL_PATH)
-        args['eval_data'] = EVAL_PATH
+        eval_path = extract_dataset(eval_data, EVAL_PATH)
+        args['eval_data'] = eval_path
 
     root_path = os.getcwd()
     deepspeed_config = os.path.join(root_path, "ds_config/ds_z3_fp16_config.json")
@@ -106,7 +111,7 @@ def train(
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     os.environ["HF_DATASETS_CACHE"] = "/src/.hf-cache"
 
-    flags = [f'--{k}={v}' for k, v in args.items()]
+    flags = [f'--{k}={v}' for k, v in args.items() if v is not None]
 
     cmd = ["deepspeed", num_gpus_flag, "--module", "training.trainer", f"--deepspeed={deepspeed_config}"] + flags
 
