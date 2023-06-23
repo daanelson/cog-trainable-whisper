@@ -2,19 +2,25 @@
 Cog implementation of a trainable whisper model. 
 Lovingly borrowed from https://huggingface.co/blog/fine-tune-whisper
 """
-import os
-from transformers import WhisperProcessor, WhisperForConditionalGeneration, Seq2SeqTrainingArguments, Seq2SeqTrainer, HfArgumentParser
-from datasets import load_dataset, DatasetDict, load_from_disk
 import multiprocessing
-import torch
-import evaluate
-
+import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Optional, Union
+
+import evaluate
+import torch
+from datasets import DatasetDict, load_dataset, load_from_disk
+from transformers import (
+    HfArgumentParser,
+    Seq2SeqTrainer,
+    Seq2SeqTrainingArguments,
+    WhisperForConditionalGeneration,
+    WhisperProcessor,
+)
 
 
 @dataclass
-class WhisperTrainingArguments():
+class WhisperTrainingArguments:
     model_name: str
     local_output_dir: str
     train_data: str
@@ -22,10 +28,13 @@ class WhisperTrainingArguments():
     eval_data: Optional[str] = field(default=None)
 
 
-
-def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingArguments):
+def train(
+    whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingArguments
+):
     model_name = f"openai/whisper-{whisper_args.model_name}"
-    processor = WhisperProcessor.from_pretrained(model_name, language=whisper_args.whisper_language, task="transcribe")
+    processor = WhisperProcessor.from_pretrained(
+        model_name, language=whisper_args.whisper_language, task="transcribe"
+    )
     feature_extractor = processor.feature_extractor
     tokenizer = processor.tokenizer
 
@@ -33,13 +42,15 @@ def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingA
         # load and resample audio data from 48 to 16kHz
         audio = batch["audio"]
 
-        # compute log-Mel input features from input audio array 
-        batch["input_features"] = feature_extractor(audio["array"], sampling_rate=audio["sampling_rate"]).input_features[0]
+        # compute log-Mel input features from input audio array
+        batch["input_features"] = feature_extractor(
+            audio["array"], sampling_rate=audio["sampling_rate"]
+        ).input_features[0]
 
-        # encode target text to label ids 
+        # encode target text to label ids
         batch["labels"] = tokenizer(batch["sentence"]).input_ids
         return batch
-    
+
     cpu_count = multiprocessing.cpu_count()
 
     print("Loading train dataset...")
@@ -50,29 +61,44 @@ def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingA
     class DataCollatorSpeechSeq2SeqWithPadding:
         processor: Any
 
-        def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
+        def __call__(
+            self, features: List[Dict[str, Union[List[int], torch.Tensor]]]
+        ) -> Dict[str, torch.Tensor]:
             # split inputs and labels since they have to be of different lengths and need different padding methods
             # first treat the audio inputs by simply returning torch tensors
-            input_features = [{"input_features": feature["input_features"]} for feature in features]
-            batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
+            input_features = [
+                {"input_features": feature["input_features"]} for feature in features
+            ]
+            batch = self.processor.feature_extractor.pad(
+                input_features, return_tensors="pt"
+            )
 
             # get the tokenized label sequences
             label_features = [{"input_ids": feature["labels"]} for feature in features]
             # pad the labels to max length
-            labels_batch = self.processor.tokenizer.pad(label_features, return_tensors="pt")
+            labels_batch = self.processor.tokenizer.pad(
+                label_features, return_tensors="pt"
+            )
 
             # replace padding with -100 to ignore loss correctly
-            labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
+            labels = labels_batch["input_ids"].masked_fill(
+                labels_batch.attention_mask.ne(1), -100
+            )
 
             # if bos token is appended in previous tokenization step,
             # cut bos token here as it's append later anyways
-            if (labels[:, 0] == self.processor.tokenizer.bos_token_id).all().cpu().item():
+            if (
+                (labels[:, 0] == self.processor.tokenizer.bos_token_id)
+                .all()
+                .cpu()
+                .item()
+            ):
                 labels = labels[:, 1:]
 
             batch["labels"] = labels
 
             return batch
-    
+
     data_collator = DataCollatorSpeechSeq2SeqWithPadding(processor=processor)
 
     metric = evaluate.load("wer")
@@ -93,7 +119,7 @@ def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingA
 
         return {"wer": wer}
 
-    # Loading model 
+    # Loading model
     model = WhisperForConditionalGeneration.from_pretrained(model_name)
     model.config.forced_decoder_ids = None
     model.config.suppress_tokens = []
@@ -115,11 +141,11 @@ def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingA
     )
 
     trainer.train()
-    trainer.save_model(output_dir = os.path.join(whisper_args.local_output_dir, 'model'))
-    processor.save_pretrained(os.path.join(whisper_args.local_output_dir, 'processor'))
+    trainer.save_model(output_dir=os.path.join(whisper_args.local_output_dir, "model"))
+    processor.save_pretrained(os.path.join(whisper_args.local_output_dir, "processor"))
 
-if __name__ == '__main__':
 
+if __name__ == "__main__":
     parser = HfArgumentParser([WhisperTrainingArguments, Seq2SeqTrainingArguments])
     whisper_args, seq2seq_args = parser.parse_args_into_dataclasses()
     train(whisper_args, seq2seq_args)
