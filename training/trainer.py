@@ -2,6 +2,7 @@
 Cog implementation of a trainable whisper model. 
 Lovingly borrowed from https://huggingface.co/blog/fine-tune-whisper
 """
+import os
 from transformers import WhisperProcessor, WhisperForConditionalGeneration, Seq2SeqTrainingArguments, Seq2SeqTrainer, HfArgumentParser
 from datasets import load_dataset, DatasetDict, load_from_disk
 import multiprocessing
@@ -114,7 +115,8 @@ def train(whisper_args: WhisperTrainingArguments, seq2seq_args: Seq2SeqTrainingA
     )
 
     trainer.train()
-    trainer.model.save_pretrained(whisper_args.local_output_dir)
+    trainer.save_model(output_dir = os.path.join(whisper_args.local_output_dir, 'model'))
+    processor.save_pretrained(os.path.join(whisper_args.local_output_dir, 'processor'))
 
 if __name__ == '__main__':
 

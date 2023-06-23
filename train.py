@@ -41,7 +41,7 @@ def train(
     ),
     model_name: str = Input(
         description="which whisper model do you want to fine-tune?",
-        choices=["small", "medium", "large-v2"],
+        choices=["tiny", "small", "medium", "large-v2"],
         default="small"
     ),
     per_device_train_batch_size: int = Input(description="batch size per GPU", default=16, ge=1),
@@ -123,5 +123,13 @@ def train(
         raise Exception(
             f"Training failed! Process returned error code {res}. Check the logs for details."
         )
+    
+    out_path = "training_output.zip"
 
-    return TrainingOutput(weights=Path(MODEL_OUT))
+    directory = Path(MODEL_OUT)
+    with zipfile.ZipFile(out_path, "w") as zip:
+        for file_path in directory.rglob("*"):
+            print(file_path)
+            zip.write(file_path, arcname=file_path.relative_to(directory))
+
+    return TrainingOutput(weights=Path(out_path))
