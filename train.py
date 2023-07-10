@@ -1,5 +1,6 @@
 import os
 import shutil
+import tarfile
 import zipfile
 from subprocess import run
 
@@ -17,17 +18,17 @@ class TrainingOutput(BaseModel):
     weights: Path
 
 
-def extract_dataset(zip_file_path, extract_directory):
-    if os.path.exists(extract_directory):
-        shutil.rmtree(extract_directory)
-    with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-        zip_ref.extractall(extract_directory)
+def extract_dataset(tarball, target_dir):
+    # Check if the target directory exists. If not, create it.
+    if not os.path.isdir(target_dir):
+        os.makedirs(target_dir)
 
-    if len(os.listdir(extract_directory)) == 1:
-        # zip likes to nest subdirectories
-        return os.path.join(extract_directory, os.listdir(extract_directory)[0])
-    return extract_directory
-
+    try:
+        with tarfile.open(tarball) as tf:
+            tf.extractall(path=target_dir)
+        return target_dir
+    except Exception as e:
+        print(f"An error occurred while extracting {tarball}. Error: {e}")
 
 def train(
     train_data: Path = Input(
