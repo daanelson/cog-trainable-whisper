@@ -52,11 +52,11 @@ def make_tarfile(output_filename, source_dir):
                 tar.add(full_path, arcname=os.path.relpath(full_path, source_dir))
     return Path(output_filename)
 
-def download_file(url, folder, index):
-    """Renaming files s.t."""
-    # extension = url.split('.')[-1]
-    subprocess.check_call(["pget", url, folder])
-    return url.split('/')[-1]
+def download_file(url, folder):
+    """Downloads and stores files"""
+    file_name = url.split('/')[-1]
+    subprocess.check_call(["pget", url, os.path.join(folder, file_name)])
+    return file_name
 
 def write_file(text, folder, audio_fname):
     """Writes text file consistent with audio filename"""
@@ -90,6 +90,8 @@ class WhisperDatasetProcessor(BasePredictor):
             untar(audio_files, self.audio_folder)
             untar(text_files, self.text_folder)
         elif jsonl_data:
+            os.mkdir(self.audio_folder)
+            os.mkdir(self.text_folder)
             self.parse_jsonl(jsonl_data)
         else:
             raise ValueError("You need to pass either audio & text or a jsonl of files")
@@ -104,9 +106,9 @@ class WhisperDatasetProcessor(BasePredictor):
                 json_object = json.loads(line)
                 data.append(json_object)
         for ind, row in enumerate(data):
-            audio_fname = download_file(row['audio'], self.audio_folder, ind)
+            audio_fname = download_file(row['audio'], self.audio_folder)
             if 'https:' in row['sentence']:
-                download_file(row['sentence'], self.text_folder, ind)
+                download_file(row['sentence'], self.text_folder)
             else:
                 write_file(row['sentence'], self.text_folder, audio_fname)
 
