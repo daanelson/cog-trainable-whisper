@@ -2,6 +2,7 @@ import argparse
 import glob
 import json
 import os
+import shutil
 import tarfile
 import subprocess
 from datasets import Dataset, Audio, Value
@@ -13,13 +14,25 @@ Example script parsing audio & transcription data into fixed dataset for whisper
 
 
 def untar(tarball, target_dir):
+    """Untars a tarball. Flattens all directory structure and returns a list of files."""
     # Check if the target directory exists. If not, create it.
     if not os.path.isdir(target_dir):
         os.makedirs(target_dir)
 
     try:
         with tarfile.open(tarball) as tf:
-            tf.extractall(path=target_dir)
+            for member in tf.getmembers():
+                if member.isdir():
+                    continue  
+                
+                # Ensure we remove all leading directories from file path
+                path = os.path.join(target_dir, (member.name.split("/")[-1]))
+                
+                
+                # Extract the file (note we need to use `tf.extractfile` because
+                # `tf.extractall` doesn't let us control the output path per file)
+                with tf.extractfile(member) as f, open(path, "wb") as out:
+                    out.write(f.read())
     except Exception as e:
         print(f"An error occurred while extracting {tarball}. Error: {e}")
 
@@ -30,7 +43,13 @@ def make_tarfile(output_filename, source_dir):
         return
 
     with tarfile.open(output_filename, "w:gz") as tar:
-        tar.add(source_dir, arcname=os.path.basename(source_dir))
+        for root, _, files in os.walk(source_dir):
+            for file in files:
+                # Create full path to the file
+                full_path = os.path.join(root, file)
+                # Add file to the tar file with a relative path
+                # This will not include the directory itself
+                tar.add(full_path, arcname=os.path.relpath(full_path, source_dir))
     return Path(output_filename)
 
 def download_file(url, folder, index):
@@ -52,16 +71,24 @@ class WhisperDatasetProcessor(BasePredictor):
         self.audio_folder = "/src/audio"
         self.text_folder = "/src/text"
         self.out_path = "dataset_out"
-        pass
+
+        def _clear_if_exists(fpath):
+            if os.path.exists(fpath):
+                shutil.rmtree(fpath)
+
+        _clear_if_exists(self.audio_folder)
+        _clear_if_exists(self.text_folder)
+        _clear_if_exists(self.out_path)
 
     def predict(self,
             audio_files: Path = Input(description="tarball with list of audio files", default=None),
             text_files: Path = Input(description="tarball with list of transcriptions", default=None),
             jsonl_data: Path = Input(description="jsonl file with list of {'audio':<audio_url>', 'sentence':<transcription>})", default=None)
         ) -> Path:
+
         if audio_files and text_files:
             untar(audio_files, self.audio_folder)
-            untar(text_files, self.ext_folder)
+            untar(text_files, self.text_folder)
         elif jsonl_data:
             self.parse_jsonl(jsonl_data)
         else:
@@ -87,9 +114,15 @@ class WhisperDatasetProcessor(BasePredictor):
         audio_folder = self.audio_folder
         text_folder = self.text_folder
         out_path = self.out_path
-        audio_data = [val for val in os.listdir(audio_folder)]
+        audio_data = [os.path.join(audio_folder,val) for val in os.listdir(audio_folder)]
 
-        text_labels = [open(val).strip().split(" ", maxsplit=1) for val in os.listdir(text_folder)]
+        def parse_text(val):
+            with open(os.path.join(text_folder, val)) as f:
+                text = f.readlines()
+                text = '\n'.join(text)
+            return text.strip()
+
+        text_labels = [parse_text(val) for val in os.listdir(text_folder)]
 
         if len(audio_data) != len(text_labels):
             raise Exception(f"Data size mismatch, {len(audio_data)} audio files and {len(text_labels)} text files were provided")
@@ -107,17 +140,17 @@ class WhisperDatasetProcessor(BasePredictor):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Audio and Text Predictor')
 
-    parser.add_argument('--audio_files', 
+    parser.add_argument('--audio-files', 
                         type=Path, 
                         help='Tarball with list of audio files', 
                         default=None)
     
-    parser.add_argument('--text_files', 
+    parser.add_argument('--transcript-files', 
                         type=Path, 
                         help='Tarball with list of transcriptions', 
                         default=None)
 
-    parser.add_argument('--jsonl', 
+    parser.add_argument('--jsonl-data', 
                         type=Path, 
                         help="JSONL file with list of {'audio':<audio_url>, 'sentence':<transcription>}", 
                         default=None)
@@ -126,5 +159,5 @@ if __name__ == "__main__":
     
     p = WhisperDatasetProcessor()
     p.setup()
-    p.predict(audio_files=args.audio_files, text_files=args.text_files, jsonl=args.jsonl)
+    p.predict(audio_files=args.audio_files, text_files=args.transcript_files, jsonl_data=args.jsonl_data)
 

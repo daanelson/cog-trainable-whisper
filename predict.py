@@ -9,7 +9,6 @@ from transformers import WhisperProcessor, pipeline
 
 
 class Predictor(BasePredictor):
-    # NB: change from the old version: weights now refers to the fine-tuned adaptor weights, and not the underlying model weights
     def setup(self, weights: Optional[Path] = None):
         if weights is not None:
             weights_url = str(weights)
