@@ -25,6 +25,7 @@ class Predictor(BasePredictor):
                 )
         else:
             weights = "openai/whisper-small"
+            processor = WhisperProcessor.from_pretrained(weights)
         self.model = pipeline(
             task="automatic-speech-recognition",
             model=weights,
