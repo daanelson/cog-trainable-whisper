@@ -33,5 +33,5 @@ build:
     - curl -o /usr/local/bin/pget -L "https://github.com/replicate/pget/releases/download/v0.0.1/pget" && chmod +x /usr/local/bin/pget
 
 # predict.py defines how predictions are run on your model
-predict: "process_data.py:Predictor"
+predict: "predict.py:Predictor"
 train: "train.py:train"
