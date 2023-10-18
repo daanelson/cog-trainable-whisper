@@ -104,7 +104,7 @@ def train(
     metric = evaluate.load("wer")
 
     def compute_metrics(pred):
-        tokenizer = processor
+        tokenizer = processor.tokenizer
         pred_ids = pred.predictions
         label_ids = pred.label_ids
 
