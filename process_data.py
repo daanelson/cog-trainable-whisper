@@ -83,34 +83,14 @@ class WhisperDatasetProcessor(BasePredictor):
     def predict(self,
             audio_files: Path = Input(description="tarball with list of audio files", default=None),
             text_files: Path = Input(description="tarball with list of transcriptions", default=None),
-            jsonl_data: Path = Input(description="jsonl file with list of {'audio':<audio_url>', 'sentence':<transcription>})", default=None)
         ) -> Path:
 
-        if audio_files and text_files:
-            untar(audio_files, self.audio_folder)
-            untar(text_files, self.text_folder)
-        elif jsonl_data:
-            os.mkdir(self.audio_folder)
-            os.mkdir(self.text_folder)
-            self.parse_jsonl(jsonl_data)
-        else:
-            raise ValueError("You need to pass either audio & text or a jsonl of files")
+        untar(audio_files, self.audio_folder)
+        untar(text_files, self.text_folder)
         
         self.build_dataset()
         return make_tarfile('whisper_dataset.tar.gz', self.out_path)
-        
-    def parse_jsonl(self, jsonl_path):
-        data = []
-        with open(jsonl_path, "r") as f:
-            for line in f:
-                json_object = json.loads(line)
-                data.append(json_object)
-        for ind, row in enumerate(data):
-            audio_fname = download_file(row['audio'], self.audio_folder)
-            if 'https:' in row['sentence']:
-                download_file(row['sentence'], self.text_folder)
-            else:
-                write_file(row['sentence'], self.text_folder, audio_fname)
+
 
     def build_dataset(self):
         audio_folder = self.audio_folder
@@ -152,14 +132,9 @@ if __name__ == "__main__":
                         help='Tarball with list of transcriptions', 
                         default=None)
 
-    parser.add_argument('--jsonl-data', 
-                        type=Path, 
-                        help="JSONL file with list of {'audio':<audio_url>, 'sentence':<transcription>}", 
-                        default=None)
-
     args = parser.parse_args()
     
     p = WhisperDatasetProcessor()
     p.setup()
-    p.predict(audio_files=args.audio_files, text_files=args.transcript_files, jsonl_data=args.jsonl_data)
+    p.predict(audio_files=args.audio_files, text_files=args.transcript_files)
 

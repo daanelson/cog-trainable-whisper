@@ -4,10 +4,10 @@
 build:
   # set to true if your model requires a GPU
   gpu: true
-  cuda: "11.7"
+  cuda: "11.8"
 
   # python version in the form '3.8' or '3.8.12'
-  python_version: "3.8"
+  python_version: "3.11"
 
   system_packages:
     - "apt-transport-https"
@@ -21,9 +21,9 @@ build:
     - "torch==2.0"
     - "datasets==2.13.0"
     - "transformers"
-    - "accelerate==0.20.3"
+    - "accelerate==0.23.0"
     - "tensorizer==1.0.1"
-    - "deepspeed==0.8.3"
+    - "deepspeed==0.10.3"
     - "evaluate==0.4.0"
     - "soundfile==0.12.1"
     - "jiwer==3.0.2"
@@ -33,5 +33,5 @@ build:
     - curl -o /usr/local/bin/pget -L "https://github.com/replicate/pget/releases/download/v0.0.1/pget" && chmod +x /usr/local/bin/pget
 
 # predict.py defines how predictions are run on your model
-predict: "predict.py:Predictor"
+predict: "process_data.py:Predictor"
 train: "train.py:train"
