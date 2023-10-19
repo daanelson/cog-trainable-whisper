@@ -1,1 +1,12 @@
-test-data/**
+example-data/
+parsed_data/
+checkpoints/
+test-data/
+audio/
+text/
+dataset/
+dataset_out/
+model_out/
+train_data/
+eval_data/
+__pycache__/
