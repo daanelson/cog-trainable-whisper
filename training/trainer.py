@@ -10,13 +10,9 @@ from typing import Any, Dict, List, Optional, Union
 import evaluate
 import torch
 from datasets import DatasetDict, load_dataset, load_from_disk
-from transformers import (
-    HfArgumentParser,
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
-    WhisperForConditionalGeneration,
-    WhisperProcessor,
-)
+from transformers import (HfArgumentParser, Seq2SeqTrainer,
+                          Seq2SeqTrainingArguments,
+                          WhisperForConditionalGeneration, WhisperProcessor)
 
 
 @dataclass

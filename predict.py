@@ -7,11 +7,12 @@ import torch
 from cog import BasePredictor, Input, Path
 from transformers import WhisperProcessor, pipeline
 
-#os.environ['COG_WEIGHTS'] = 'https://storage.googleapis.com/dan-scratch-public/whisper_trained.zip'
+# os.environ['COG_WEIGHTS'] = 'https://storage.googleapis.com/dan-scratch-public/whisper_trained.zip'
+
 
 class Predictor(BasePredictor):
     def setup(self, weights: Optional[Path] = None):
-        if weights is not None and str(weights) != 'weights':
+        if weights is not None and str(weights) != "weights":
             weights_url = str(weights)
             local_path = "/src/weights.zip"
             os.system(f"pget {weights_url} {local_path}")
