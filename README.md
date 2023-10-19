@@ -14,7 +14,7 @@ Once this is set up, run `python process_data.py --audio_files path/to/audio --t
 
 You can see the various arguments to train whisper in `train.py`. Definitely recommend having an evaluation dataset to go along with your training dataset (prepared in the same way as above). 
 
-To train Whisper with that dataset, use the Replciate Training API to run a training on the most recent version of [`daanelson/whisper-tune`](https://replicate.com/daanelson/whisper-tune). Make sure to upload your training & validation files to a publicly accessible bucket somewhere. 
+To train Whisper with that dataset, use the [Replicate fine-tuning API](https://replicate.com/docs/fine-tuning) to run a training on the most recent version of [`daanelson/whisper-tune`](https://replicate.com/daanelson/whisper-tune). Make sure to upload your training & validation files to a publicly accessible bucket somewhere. 
 
 You'll also want to select the model to train; I'd recommend large-v2, though if you want to overfit against tiny or small to validate your dataset first, that's valid too. 
 
